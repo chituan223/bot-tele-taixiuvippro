@@ -227,7 +227,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == BTN_NHAP_KEY:
         context.user_data['state'] = 'INPUT_KEY'
-        await update.message.reply_text(f"🔑 {bold('NHẬP MÃ KEY CỦA BẠY')}:")
+        await update.message.reply_text(f"🔑 {bold('NHẬP MÃ KEY CỦA BẠN')}:")
     elif text == BTN_NAP_TIEN:
         if await check_user_key(uid):
             await update.message.reply_text(f"⚠️ {bold('BẠN ĐANG CÓ KEY CÒN HẠN!')}")
