@@ -14,8 +14,8 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
 ADMIN_ID = 7138785294 
 API_LUCKYWIN = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
-API_LC79 = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
-API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/"
+API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
+API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/api/taixiumd5"
 
 # --- CẤU HÌNH FIREBASE (DÙNG REST API) ---
 FIREBASE_URL = "https://tuanchimto-37c66-default-rtdb.firebaseio.com"
@@ -140,7 +140,7 @@ async def loop_prediction(context, chat_id, message_id, api_url, name):
             ket_qua = data.get('Kết') or data.get('Ket') or "N/A"
             phien_hien_tai = data.get('Phiên hiện tại') or data.get('Phien_hien_tai') or "N/A"
             du_doan = data.get('Dự đoán') or data.get('Du_doan') or "N/A"
-            do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "95%"
+            do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "N/A"
             icon = "🔴" if "Tài" in str(du_doan) else "🔵" if "Xỉu" in str(du_doan) else "🟡"
             res_text = f"""┏━━━━━━━━━━━━━━━━━━┓
    🔥 {bold(f'DỰ ĐOÁN {name}')} 🔥
