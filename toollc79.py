@@ -13,9 +13,10 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # ==========================================
 BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
 ADMIN_ID = 7138785294 
-API_LUCKYWIN = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
+# Đã cập nhật 3 API riêng biệt cho 3 sảnh game
 API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
 API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/api/taixiumd5"
+API_LUCKYWIN = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
 
 # --- CẤU HÌNH FIREBASE (DÙNG REST API) ---
 FIREBASE_URL = "https://tuanchimto-37c66-default-rtdb.firebaseio.com"
@@ -107,12 +108,10 @@ def tool_kb():
 # ========== FUNCTIONS (XỬ LÝ CHÍNH) ==========
 
 async def check_user_key(uid):
-    # Luôn lấy dữ liệu mới nhất từ Firebase để kiểm tra
     user_keys = await fb_get(f"keys/{uid}")
     if not user_keys or not isinstance(user_keys, list): return False
     now = datetime.now()
     valid_keys = [k for k in user_keys if datetime.fromisoformat(k['expiry']) > now]
-    # Cập nhật lại nếu có key hết hạn để làm sạch DB
     if len(valid_keys) != len(user_keys):
         await fb_set(f"keys/{uid}", valid_keys)
     return len(valid_keys) > 0
@@ -141,28 +140,35 @@ async def loop_prediction(context, chat_id, message_id, api_url, name):
             phien_hien_tai = data.get('Phiên hiện tại') or data.get('Phien_hien_tai') or "N/A"
             du_doan = data.get('Dự đoán') or data.get('Du_doan') or "N/A"
             do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "N/A"
+            
+            # Giao diện icon sống động hơn
             icon = "🔴" if "Tài" in str(du_doan) else "🔵" if "Xỉu" in str(du_doan) else "🟡"
+            status_icon = "🟢" if error_count == 0 else "🟠"
+            
             res_text = f"""┏━━━━━━━━━━━━━━━━━━┓
    🔥 {bold(f'DỰ ĐOÁN {name}')} 🔥
 ┗━━━━━━━━━━━━━━━━━━┛
-💎 {bold('Phiên Vừa Qua')}: `{phien_vua_qua}`
-🎲 {bold('Kết Quả')}: `{x1}-{x2}-{x3}` ➔ {bold(str(ket_qua))}
-📊 {bold('Tổng Điểm')}: `{tong}`
+💎 {bold('Phiên trước')}: `{phien_vua_qua}`
+🎲 {bold('Kết quả')}: `{x1}-{x2}-{x3}` ➔ {bold(str(ket_qua))}
+📊 {bold('Tổng điểm')}: `{tong}`
 ━━━━━━━━━━━━━━━━━━━━
-🆔 {bold('Phiên Hiện Tại')}: `{phien_hien_tai}`
-{icon} {bold('Hệ Thống Phân Tích')}: ✨ {bold(str(du_doan).upper())} ✨
-📈 {bold('Độ Tin Cậy')}: `{do_tin_cay}`
+🆔 {bold('Phiên hiện tại')}: `{phien_hien_tai}`
+{icon} {bold('Hệ thống dự đoán')}:
+👉 ✨ {bold(str(du_doan).upper())} ✨ 👈
+
+📈 {bold('Tỷ lệ thắng')}: `{do_tin_cay}`
 ━━━━━━━━━━━━━━━━━━━━
-🔄 {bold('Trạng Thái')}: {bold('Tự Động Cập Nhật...')}
-⏳ {bold('Thời Gian')}: {datetime.now().strftime('%H:%M:%S')}
-🚀 {bold('Lưu ý')}: Làm mới sau mỗi 20 giây."""
+{status_icon} {bold('Trạng thái')}: {bold('TỰ ĐỘNG CẬP NHẬT')}
+⏳ {bold('Cập nhật lúc')}: {datetime.now().strftime('%H:%M:%S')}
+🚀 {bold('Lưu ý')}: AI tự động phân tích sau 20 giây."""
+
             try:
                 await context.bot.edit_message_text(res_text, chat_id=chat_id, message_id=message_id)
             except: break
         else:
             error_count += 1
             if error_count > 5:
-                try: await context.bot.edit_message_text(f"❌ {bold('MẤT KẾT NỐI API')} {name}.", chat_id=chat_id, message_id=message_id)
+                try: await context.bot.edit_message_text(f"❌ {bold('MẤT KẾT NỐI API')} {name}. Vui lòng thử lại sau.", chat_id=chat_id, message_id=message_id)
                 except: break
         await asyncio.sleep(20)
 
@@ -209,13 +215,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         if found_key:
             if owner_id != uid:
-                # Chuyển quyền sở hữu key sang người nhập mới
                 user_keys = await fb_get(f"keys/{uid}")
                 if not isinstance(user_keys, list): user_keys = []
                 user_keys.append(found_key)
                 await fb_set(f"keys/{uid}", user_keys)
-                
-                # Xóa key ở người cũ
                 old_owner_keys = [k for k in all_keys_db[owner_id] if k['key'] != key_input]
                 await fb_set(f"keys/{owner_id}", old_owner_keys)
             
@@ -275,7 +278,7 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📝 {bold('𝐍𝐨̣̂i 𝐝𝐮n𝐠')}: `{content}`
 ━━━━━━━━━━━━━━━━━━━━
 ⚠️ {bold('𝐂𝐡uy𝐞̂̉ n 𝐤𝐡𝐨𝐚̉n đ𝐮́n𝐠 𝐧𝐨̣̂i 𝐝𝐮n𝐠')}
-📞 {bold('𝐋𝐢𝐞̂ n 𝐡𝐞̣̂')}: @anhyeuem1111"""
+📞 {bold('𝐋𝐢𝐞̂n 𝐡𝐞̣̂')}: @anhyeuem1111"""
 
         await query.message.reply_photo(
             photo="https://i.postimg.cc/9Qwpq35R/1775383551412.png", 
@@ -296,10 +299,8 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             days_to_add = int(p_info['days'])
             expiry_date = datetime.now() + timedelta(days=days_to_add if days_to_add < 9000 else 3650)
             
-            # Lấy list key hiện tại của user
             current_keys = await fb_get(f"keys/{target_uid}")
-            if not isinstance(current_keys, list):
-                current_keys = []
+            if not isinstance(current_keys, list): current_keys = []
             
             current_keys.append({
                 "key": new_key_code, 
@@ -307,7 +308,6 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "created_at": datetime.now().isoformat()
             })
             
-            # Cập nhật lên Firebase
             await fb_set(f"keys/{target_uid}", current_keys)
             await fb_delete(f"pending/{target_uid}")
             
