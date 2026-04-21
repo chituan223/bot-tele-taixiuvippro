@@ -15,7 +15,7 @@ BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
 ADMIN_ID = 7138785294 
 # Đã cập nhật 3 API riêng biệt cho 3 sảnh game
 API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
-API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/api/taixiumd5"
+API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/"
 API_LUCKYWIN = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
 
 # --- CẤU HÌNH FIREBASE (DÙNG REST API) ---
