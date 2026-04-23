@@ -11,11 +11,11 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
 # ==========================================
-BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
+BOT_TOKEN = "8782059164:AAEFUDE7syalSWkXeY5Md2Hl_sJMQOPzmT8"
 ADMIN_ID = 7138785294 
-# Đã cập nhật 3 API riêng biệt cho 3 sảnh game
+# API Sảnh Game
 API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
-API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/"
+API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/api/taixiumd5"
 API_LUCKYWIN = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
 
 # --- CẤU HÌNH FIREBASE (DÙNG REST API) ---
@@ -100,9 +100,9 @@ def nap_kb():
 
 def tool_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(bold("🎮 LC79 (AUTO)"), callback_data="tool_lc79")],
-        [InlineKeyboardButton(bold("🎮 XD88 (AUTO)"), callback_data="tool_xocdia88")],
-        [InlineKeyboardButton(bold("🎮 LUCKYWIN (AUTO)"), callback_data="tool_luckywin")]
+        [InlineKeyboardButton(bold("🎮 SẢNH LC79"), callback_data="tool_lc79")],
+        [InlineKeyboardButton(bold("🎮 SẢNH XD88"), callback_data="tool_xocdia88")],
+        [InlineKeyboardButton(bold("🎮 SẢNH LUCKYWIN"), callback_data="tool_luckywin")]
     ])
 
 # ========== FUNCTIONS (XỬ LÝ CHÍNH) ==========
@@ -121,7 +121,8 @@ async def fetch_api_data(url):
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get('data', {})
+                # Trả về data trực tiếp theo cấu trúc JSON của bạn
+                return response.json()
     except: pass
     return None
 
@@ -131,36 +132,38 @@ async def loop_prediction(context, chat_id, message_id, api_url, name):
         data = await fetch_api_data(api_url)
         if data:
             error_count = 0
-            phien_vua_qua = data.get('Phiên') or data.get('Phien') or "N/A"
-            x1 = data.get('Xúc xắc 1') or data.get('Xuc_xac_1') or "?"
-            x2 = data.get('Xúc xắc 2') or data.get('Xuc_xac_2') or "?"
-            x3 = data.get('Xúc xắc 3') or data.get('Xuc_xac_3') or "?"
-            tong = data.get('Tổng') or data.get('Tong') or "N/A"
-            ket_qua = data.get('Kết') or data.get('Ket') or "N/A"
-            phien_hien_tai = data.get('Phiên hiện tại') or data.get('Phien_hien_tai') or "N/A"
+            # Lấy thông tin theo Key JSON bạn cung cấp
+            phien_vua_qua = data.get('Phiên') or "N/A"
+            x1 = data.get('Xúc xắc 1') or "?"
+            x2 = data.get('Xúc xắc 2') or "?"
+            x3 = data.get('Xúc xắc 3') or "?"
+            tong = data.get('Tổng') or "N/A"
+            ket_qua = data.get('Kết') or "N/A"
+            phien_hien_tai = data.get('Phiên hiện tại') or "N/A"
             du_doan = data.get('Dự đoán') or data.get('Du_doan') or "N/A"
+            pattern = data.get('Pattern') or "N/A"
             do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "N/A"
             
-            # Giao diện icon sống động hơn
+            # Giao diện icon
             icon = "🔴" if "Tài" in str(du_doan) else "🔵" if "Xỉu" in str(du_doan) else "🟡"
-            status_icon = "🟢" if error_count == 0 else "🟠"
+            status_icon = "🟢"
             
-            res_text = f"""┏━━━━━━━━━━━━━━━━━━┓
-   🔥 {bold(f'DỰ ĐOÁN {name}')} 🔥
-┗━━━━━━━━━━━━━━━━━━┛
-💎 {bold('Phiên trước')}: `{phien_vua_qua}`
-🎲 {bold('Kết quả')}: `{x1}-{x2}-{x3}` ➔ {bold(str(ket_qua))}
-📊 {bold('Tổng điểm')}: `{tong}`
+            res_text = f"""╔══════════════════╗
+   ✨ {bold(f'DỰ ĐOÁN {name}')} ✨
+╚══════════════════╝
+💎 {bold('Dữ liệu phiên')}: `{phien_vua_qua}`
+┌ 🎲 Xúc xắc: `{x1} - {x2} - {x3}`
+├ 📊 Tổng điểm: `{tong}` ➔ {bold(str(ket_qua))}
+└ 🧬 Pattern: `{pattern}`
 ━━━━━━━━━━━━━━━━━━━━
-🆔 {bold('Phiên hiện tại')}: `{phien_hien_tai}`
-{icon} {bold('Hệ thống dự đoán')}:
-👉 ✨ {bold(str(du_doan).upper())} ✨ 👈
+🆔 {bold('PHIÊN HIỆN TẠI')}: `{phien_hien_tai}`
 
-📈 {bold('Tỷ lệ thắng')}: `{do_tin_cay}`
+{icon} {bold('AI Dự Đoán')}: ✨ {bold(str(du_doan).upper())} ✨
+📈 {bold('Tỷ lệ thắng')}: `{do_tin_cay}%`
 ━━━━━━━━━━━━━━━━━━━━
 {status_icon} {bold('Trạng thái')}: {bold('TỰ ĐỘNG CẬP NHẬT')}
-⏳ {bold('Cập nhật lúc')}: {datetime.now().strftime('%H:%M:%S')}
-🚀 {bold('Lưu ý')}: AI tự động phân tích sau 20 giây."""
+⏳ {bold('Lúc')}: {datetime.now().strftime('%H:%M:%S')}
+🚀 {bold('AI Core')}: {bold('MD5 Realtime')}"""
 
             try:
                 await context.bot.edit_message_text(res_text, chat_id=chat_id, message_id=message_id)
@@ -168,7 +171,7 @@ async def loop_prediction(context, chat_id, message_id, api_url, name):
         else:
             error_count += 1
             if error_count > 5:
-                try: await context.bot.edit_message_text(f"❌ {bold('MẤT KẾT NỐI API')} {name}. Vui lòng thử lại sau.", chat_id=chat_id, message_id=message_id)
+                try: await context.bot.edit_message_text(f"❌ {bold('MẤT KẾT NỐI API')} {name}. Đang thử lại...", chat_id=chat_id, message_id=message_id)
                 except: break
         await asyncio.sleep(20)
 
@@ -257,6 +260,10 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = str(query.from_user.id)
 
     if query.data in ["tool_lc79", "tool_xocdia88", "tool_luckywin"]:
+        if not await check_user_key(uid):
+             await query.message.reply_text(f"❌ {bold('KEY CỦA BẠN ĐÃ HẾT HẠN!')}")
+             return
+             
         name_map = {"tool_lc79": "LC79", "tool_xocdia88": "XD88", "tool_luckywin": "LUCKYWIN"}
         api_map = {"tool_lc79": API_LC79, "tool_xocdia88": API_XOCDIA88, "tool_luckywin": API_LUCKYWIN}
         msg = await query.message.reply_text(f"🔄 {bold(f'Đang kết nối API {name_map[query.data]}...')}")
@@ -271,14 +278,14 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = f"""💰 {bold('𝐓𝐇𝐀𝐍𝐇 𝐓𝐎𝐀́𝐍 𝐍𝐀̣𝐏 𝐓𝐈𝐄̂̀𝐍')} 💰
 ━━━━━━━━━━━━━━━━━━━━
 💵 {bold('𝐒𝐨̂́ 𝐭𝐢𝐞̂̀𝐧')}: {int(price):,} VNĐ
-🏦 {bold('𝐍𝐠𝐚̂𝐧 𝐡𝐚̀ n 𝐠')}: TPBANK
+🏦 {bold('𝐍𝐠𝐚̂𝐧 𝐡𝐚̀')}: TPBANK
 👤 {bold('𝐂𝐡𝐮̉ 𝐓𝐊')}: DINH THI TUYET
 💳 {bold('𝐒𝐨̂́ 𝐓𝐊')}: `00006326953`
 
-📝 {bold('𝐍𝐨̣̂i 𝐝𝐮n𝐠')}: `{content}`
+📝 {bold('𝐍𝐨̣̂i 𝐝𝐮𝐧𝐠')}: `{content}`
 ━━━━━━━━━━━━━━━━━━━━
-⚠️ {bold('𝐂𝐡uy𝐞̂̉ n 𝐤𝐡𝐨𝐚̉n đ𝐮́n𝐠 𝐧𝐨̣̂i 𝐝𝐮n𝐠')}
-📞 {bold('𝐋𝐢𝐞̂n 𝐡𝐞̣̂')}: @anhyeuem1111"""
+⚠️ {bold('𝐂𝐡𝐮𝐲𝐞̂̉𝐧 𝐤𝐡𝐨𝐚̉𝐧 đ𝐮́𝐧𝐠 𝐧𝐨̣̂𝐢 𝐝𝐮𝐧𝐠')}
+📞 {bold('𝐋𝐢𝐞̂𝐧 𝐡𝐞̣̂')}: @anhyeuem1111"""
 
         await query.message.reply_photo(
             photo="https://i.postimg.cc/9Qwpq35R/1775383551412.png", 
