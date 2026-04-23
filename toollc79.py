@@ -121,7 +121,6 @@ async def fetch_api_data(url):
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(url)
             if response.status_code == 200:
-                # Trả về data trực tiếp theo cấu trúc JSON của bạn
                 return response.json()
     except: pass
     return None
@@ -129,39 +128,44 @@ async def fetch_api_data(url):
 async def loop_prediction(context, chat_id, message_id, api_url, name):
     error_count = 0
     while True:
-        data = await fetch_api_data(api_url)
-        if data:
+        raw_data = await fetch_api_data(api_url)
+        if raw_data:
             error_count = 0
-            # Lấy thông tin theo Key JSON bạn cung cấp
-            phien_vua_qua = data.get('Phiên') or "N/A"
-            x1 = data.get('Xúc xắc 1') or "?"
-            x2 = data.get('Xúc xắc 2') or "?"
-            x3 = data.get('Xúc xắc 3') or "?"
-            tong = data.get('Tổng') or "N/A"
-            ket_qua = data.get('Kết') or "N/A"
-            phien_hien_tai = data.get('Phiên hiện tại') or "N/A"
+            # Xử lý đa luồng API: Một số sảnh trả về data ngay, một số bọc trong key 'data'
+            data = raw_data.get('data', raw_data) if isinstance(raw_data, dict) else {}
+            
+            # Lấy thông tin linh hoạt cho cả key có dấu (LC79) và không dấu (Luckywin/XD88)
+            phien_vua_qua = data.get('Phiên') or data.get('Phien') or "N/A"
+            x1 = data.get('Xúc xắc 1') or data.get('Xuc_xac_1') or "?"
+            x2 = data.get('Xúc xắc 2') or data.get('Xuc_xac_2') or "?"
+            x3 = data.get('Xúc xắc 3') or data.get('Xuc_xac_3') or "?"
+            tong = data.get('Tổng') or data.get('Tong') or "N/A"
+            ket_qua = data.get('Kết') or data.get('Ket') or "N/A"
+            phien_hien_tai = data.get('Phiên hiện tại') or data.get('Phien_hien_tai') or "N/A"
             du_doan = data.get('Dự đoán') or data.get('Du_doan') or "N/A"
             pattern = data.get('Pattern') or "N/A"
-            do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "N/A"
+            do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "0%"
+            
+            # Làm sạch chuỗi độ tin cậy nếu có ký tự %
+            clean_percent = str(do_tin_cay).replace('%', '')
             
             # Giao diện icon
             icon = "🔴" if "Tài" in str(du_doan) else "🔵" if "Xỉu" in str(du_doan) else "🟡"
-            status_icon = "🟢"
             
             res_text = f"""╔══════════════════╗
    ✨ {bold(f'DỰ ĐOÁN {name}')} ✨
 ╚══════════════════╝
 💎 {bold('Dữ liệu phiên')}: `{phien_vua_qua}`
 ┌ 🎲 Xúc xắc: `{x1} - {x2} - {x3}`
-├ 📊 Tổng điểm: `{tong}` ➔ {bold(str(ket_qua))}
+├ 📊 Tổng điểm: `{tong}` ➔ {bold(str(ket_qua).upper())}
 └ 🧬 Pattern: `{pattern}`
 ━━━━━━━━━━━━━━━━━━━━
 🆔 {bold('PHIÊN HIỆN TẠI')}: `{phien_hien_tai}`
 
-{icon} {bold('AI Dự Đoán')}: ✨ {bold(str(du_doan).upper())} ✨
-📈 {bold('Tỷ lệ thắng')}: `{do_tin_cay}%`
+{icon} {bold(' Dự Đoán')}: ✨ {bold(str(du_doan).upper())} ✨
+📈 {bold('Tỷ lệ thắng')}: `{clean_percent}%`
 ━━━━━━━━━━━━━━━━━━━━
-{status_icon} {bold('Trạng thái')}: {bold('TỰ ĐỘNG CẬP NHẬT')}
+🟢 {bold('Trạng thái')}: {bold('TỰ ĐỘNG CẬP NHẬT')}
 ⏳ {bold('Lúc')}: {datetime.now().strftime('%H:%M:%S')}
 🚀 {bold('AI Core')}: {bold('MD5 Realtime')}"""
 
