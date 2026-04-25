@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
 # ==========================================
-BOT_TOKEN = "8782059164:AAEFUDE7syalSWkXeY5Md2Hl_sJMQOPzmT8"
+BOT_TOKEN = "8220461934:AAGReTTOLxchwlj7zQZseSQqALTFdCokQFg"
 ADMIN_ID = 7138785294 
 # API Sảnh Game
 API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
@@ -21,10 +21,9 @@ API_LUCKYWIN = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
 # --- CẤU HÌNH FIREBASE (DÙNG REST API) ---
 FIREBASE_URL = "https://tuanchimto-37c66-default-rtdb.firebaseio.com"
 
-# ========== FIREBASE ENGINE (KHÔNG DÙNG JSON FILE) ==========
+# ========== FIREBASE ENGINE ==========
 
 async def fb_get(path):
-    """Lấy dữ liệu từ Firebase"""
     url = f"{FIREBASE_URL}/{path}.json"
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -36,7 +35,6 @@ async def fb_get(path):
     except: return {}
 
 async def fb_set(path, data):
-    """Ghi đè dữ liệu vào Firebase"""
     url = f"{FIREBASE_URL}/{path}.json"
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -44,7 +42,6 @@ async def fb_set(path, data):
     except: pass
 
 async def fb_update(path, data):
-    """Cập nhật dữ liệu vào Firebase"""
     url = f"{FIREBASE_URL}/{path}.json"
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -52,7 +49,6 @@ async def fb_update(path, data):
     except: pass
 
 async def fb_delete(path):
-    """Xóa dữ liệu trên Firebase"""
     url = f"{FIREBASE_URL}/{path}.json"
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -131,46 +127,41 @@ async def loop_prediction(context, chat_id, message_id, api_url, name):
         raw_data = await fetch_api_data(api_url)
         if raw_data:
             error_count = 0
-            # Xử lý đa luồng API: Một số sảnh trả về data ngay, một số bọc trong key 'data'
             data = raw_data.get('data', raw_data) if isinstance(raw_data, dict) else {}
             
-            # Lấy thông tin linh hoạt cho cả key có dấu (LC79) và không dấu (Luckywin/XD88)
             phien_vua_qua = data.get('Phiên') or data.get('Phien') or "N/A"
             x1 = data.get('Xúc xắc 1') or data.get('Xuc_xac_1') or "?"
             x2 = data.get('Xúc xắc 2') or data.get('Xuc_xac_2') or "?"
             x3 = data.get('Xúc xắc 3') or data.get('Xuc_xac_3') or "?"
-            tong = data.get('Tổng') or data.get('Tong') or "N/A"
+            tong = data.get('Tổng') or data.get('Tong') or "0"
             ket_qua = data.get('Kết') or data.get('Ket') or "N/A"
             phien_hien_tai = data.get('Phiên hiện tại') or data.get('Phien_hien_tai') or "N/A"
-            du_doan = data.get('Dự đoán') or data.get('Du_doan') or "N/A"
+            du_doan = data.get('Dự đoán') or data.get('Du_doan') or "WAIT"
             pattern = data.get('Pattern') or "N/A"
             do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "0%"
             
-            # Làm sạch chuỗi độ tin cậy nếu có ký tự %
             clean_percent = str(do_tin_cay).replace('%', '')
-            
-            # Giao diện icon
             icon = "🔴" if "Tài" in str(du_doan) else "🔵" if "Xỉu" in str(du_doan) else "🟡"
             
-            res_text = f"""╔══════════════════╗
-   ✨ {bold(f'DỰ ĐOÁN {name}')} ✨
-╚══════════════════╝
-💎 {bold('Dữ liệu phiên')}: `{phien_vua_qua}`
-┌ 🎲 Xúc xắc: `{x1} - {x2} - {x3}`
-├ 📊 Tổng điểm: `{tong}` ➔ {bold(str(ket_qua).upper())}
-└ 🧬 Pattern: `{pattern}`
+            res_text = f"""┏━━━━━━━━━━━━━━━━━━┓
+   💎 {bold(f'MD5 CORE AI - {name}')} 💎
+┗━━━━━━━━━━━━━━━━━━┛
+🕒 {bold('Phiên vừa qua')}: `{phien_vua_qua}`
+🎲 {bold('Xúc xắc')}: `{x1} - {x2} - {x3}`
+📊 {bold('Tổng điểm')}: `{tong}` ➜ {bold(str(ket_qua).upper())}
+🧬 {bold('Chuỗi Pattern')}: `{pattern}`
 ━━━━━━━━━━━━━━━━━━━━
 🆔 {bold('PHIÊN HIỆN TẠI')}: `{phien_hien_tai}`
 
-{icon} {bold(' Dự Đoán')}: ✨ {bold(str(du_doan).upper())} ✨
-📈 {bold('Tỷ lệ thắng')}: `{clean_percent}%`
+{icon} {bold('Hệ Thống Dự Đoán')}: ➜ ✨ {bold(str(du_doan).upper())} ✨
+📈 {bold('Độ Tin Cậy AI')}: `{clean_percent}%`
 ━━━━━━━━━━━━━━━━━━━━
-🟢 {bold('Trạng thái')}: {bold('TỰ ĐỘNG CẬP NHẬT')}
-⏳ {bold('Lúc')}: {datetime.now().strftime('%H:%M:%S')}
-🚀 {bold('AI Core')}: {bold('MD5 Realtime')}"""
+🛰 {bold('Trạng thái')}: {bold('CONNECTED 🟢')}
+⏰ {bold('Cập nhật')}: {datetime.now().strftime('%H:%M:%S')}
+⚙️ {bold('Engine')}: {bold('Realtime MD5 v3.0')}"""
 
             try:
-                await context.bot.edit_message_text(res_text, chat_id=chat_id, message_id=message_id)
+                await context.bot.edit_message_text(res_text, chat_id=chat_id, message_id=message_id, parse_mode='Markdown')
             except: break
         else:
             error_count += 1
@@ -185,14 +176,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
     uid = str(u.id)
     await fb_update(f"users/{uid}", {"name": u.first_name, "username": u.username, "join": str(datetime.now())})
-    msg = f"""👋 {bold('Chào mừng')}, {bold(u.first_name)}!
-🔥 {bold('HỆ THỐNG TOOL MD5 CORE AI')} 🔥
-━━━━━━━━━━━━━━━━━━━━
-🤖 {bold('Hệ thống')}: {bold('Sẵn sàng 🟢')}
-🆔 {bold('ID Của Bạn')}: `{u.id}`
-📅 {bold('Ngày')}: {datetime.now().strftime('%d/%m/%Y')}
-━━━━━━━━━━━━━━━━━━━━
-🚀 {bold('Vui lòng chọn chức năng bên dưới để bắt đầu!')}"""
+    
+    # Kiểm tra key ngay khi start để làm thông báo nét
+    has_key = await check_user_key(uid)
+    status_bot = "ĐÃ KÍCH HOẠT ✅" if has_key else "CHƯA KÍCH HOẠT ❌"
+    
+    msg = f"""╔══════════════════════╗
+    ✨ {bold('WELCOME TO MD5 AI')} ✨
+╚══════════════════════╝
+👋 {bold('Xin chào')}, {bold(u.first_name)}!
+━━━━━━━━━━━━━━━━━━━━━━
+👤 {bold('TÀI KHOẢN')}: `{u.id}`
+🤖 {bold('TRẠNG THÁI')}: {bold(status_bot)}
+🛰 {bold('MÁY CHỦ')}: {bold('ONLINE 🟢')}
+📅 {bold('HÔM NAY')}: {datetime.now().strftime('%d/%m/%Y')}
+━━━━━━━━━━━━━━━━━━━━━━
+🚀 {bold('HỆ THỐNG DỰ ĐOÁN MD5 REALTIME')}
+Vui lòng sử dụng menu bên dưới để bắt đầu.
+━━━━━━━━━━━━━━━━━━━━━━"""
     await update.message.reply_text(msg, reply_markup=main_kb())
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -230,7 +231,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await fb_set(f"keys/{owner_id}", old_owner_keys)
             
             context.user_data['state'] = None
-            await update.message.reply_text(f"✅ {bold('KÍCH HOẠT THÀNH CÔNG!')}", reply_markup=main_kb())
+            await update.message.reply_text(f"✅ {bold('KÍCH HOẠT THÀNH CÔNG!')}\nBây giờ bạn có thể sử dụng chức năng {bold('Dự Đoán')}.", reply_markup=main_kb())
         else:
             await update.message.reply_text(f"❌ {bold('KEY KHÔNG HỢP LỆ HOẶC HẾT HẠN')}")
         return
@@ -238,16 +239,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == BTN_NHAP_KEY:
         context.user_data['state'] = 'INPUT_KEY'
         await update.message.reply_text(f"🔑 {bold('NHẬP MÃ KEY CỦA BẠN')}:")
+        
     elif text == BTN_NAP_TIEN:
+        # KIỂM TRA PHẢI DÙNG HẾT KEY MỚI ĐƯỢC MUA THÊM
         if await check_user_key(uid):
-            await update.message.reply_text(f"⚠️ {bold('BẠN ĐANG CÓ KEY CÒN HẠN!')}")
+            await update.message.reply_text(f"⚠️ {bold('THÔNG BÁO')}:\n\nTài khoản của bạn {bold('đang còn Key')} hoạt động. Vui lòng sử dụng hết thời hạn Key hiện tại trước khi thực hiện mua thêm Key mới!")
             return
         await update.message.reply_text(f"💰 {bold('CHỌN GÓI DỊCH VỤ CẦN MUA')}:", reply_markup=nap_kb())
+        
     elif text == BTN_DU_DOAN:
         if await check_user_key(uid):
             await update.message.reply_text(f"🎯 {bold('CHỌN SẢNH GAME MUỐN DỰ ĐOÁN')}:", reply_markup=tool_kb())
         else:
-            await update.message.reply_text(f"❌ {bold('BẠN CẦN CÓ KEY ĐỂ SỬ DỤNG')}")
+            await update.message.reply_text(f"❌ {bold('TRUY CẬP BỊ TỪ CHỐI!')}\n\nBạn chưa kích hoạt Key hoặc Key đã hết hạn. Vui lòng {bold('Nạp Tiền')} hoặc {bold('Nhập Key')} để tiếp tục.")
+            
     elif text == BTN_LIEN_HE:
         kb = InlineKeyboardMarkup([[InlineKeyboardButton(bold("💬 Nhắn Admin"), url="https://t.me/anhyeuem1111")]])
         support_msg = f"""📞 {bold('HỖ TRỢ KHÁCH HÀNG')}
@@ -282,17 +287,17 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = f"""💰 {bold('𝐓𝐇𝐀𝐍𝐇 𝐓𝐎𝐀́𝐍 𝐍𝐀̣𝐏 𝐓𝐈𝐄̂̀𝐍')} 💰
 ━━━━━━━━━━━━━━━━━━━━
 💵 {bold('𝐒𝐨̂́ 𝐭𝐢𝐞̂̀𝐧')}: {int(price):,} VNĐ
-🏦 {bold('𝐍𝐠𝐚̂𝐧 𝐡𝐚̀')}: TPBANK
+🏦 {bold('𝐍𝐠𝐚̂𝐧 𝐡𝐚̀ng')}: VIETCOMBANK
 👤 {bold('𝐂𝐡𝐮̉ 𝐓𝐊')}: DINH THI TUYET
-💳 {bold('𝐒𝐨̂́ 𝐓𝐊')}: `00006326953`
+💳 {bold('𝐒𝐨̂́ 𝐓𝐊')}: `1063485588`
 
 📝 {bold('𝐍𝐨̣̂i 𝐝𝐮𝐧𝐠')}: `{content}`
 ━━━━━━━━━━━━━━━━━━━━
-⚠️ {bold('𝐂𝐡𝐮𝐲𝐞̂̉𝐧 𝐤𝐡𝐨𝐚̉𝐧 đ𝐮́𝐧𝐠 𝐧𝐨̣̂𝐢 𝐝𝐮𝐧𝐠')}
-📞 {bold('𝐋𝐢𝐞̂𝐧 𝐡𝐞̣̂')}: @anhyeuem1111"""
+⚠️ {bold('𝐂𝐡uyển khoản đúng nội dung')}
+📞 {bold('Liên hệ')}: @anhyeuem1111"""
 
         await query.message.reply_photo(
-            photo="https://i.postimg.cc/9Qwpq35R/1775383551412.png", 
+            photo="https://i.postimg.cc/7b8GzHY2/IMG-2887.jpg", 
             caption=text, 
             reply_markup=kb
         )
@@ -327,7 +332,7 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ━━━━━━━━━━━━━━━━━━━━
 🔑 𝐊𝐄𝐘: `{new_key_code}`
 ⏳ 𝐇𝐚̣ hạn dùng: {expiry_date.strftime('%d/%m/%Y %H:%M')}
-🚀 𝐇𝐚̃𝐲 𝐧𝐡𝐚̣̂𝐩 𝐤𝐞𝐲 đ𝐞̂̉ 𝐬𝐮̛̉ 𝐝𝐮̣𝐧𝐠!"""
+🚀 {bold('𝐇𝐚̃𝐲 𝐧𝐡𝐚̣̂𝐩 𝐤𝐞𝐲 đ𝐞̂̉ 𝐬𝐮̛̉ 𝐝𝐮̣𝐧𝐠!')}"""
                 await context.bot.send_message(int(target_uid), msg_to_user)
             except: pass
             
@@ -367,7 +372,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     
-    print("🤖 Bot Firebase Cloud is starting...")
+    print("🤖 Bot MD5 CORE AI is starting...")
     app.run_polling()
 
 if __name__ == "__main__":
