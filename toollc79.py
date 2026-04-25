@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
 # ==========================================
-BOT_TOKEN = "8220461934:AAGReTTOLxchwlj7zQZseSQqALTFdCokQFg"
+BOT_TOKEN = "8782059164:AAEFUDE7syalSWkXeY5Md2Hl_sJMQOPzmT8"
 ADMIN_ID = 7138785294 
 # API Sảnh Game
 API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
@@ -88,10 +88,10 @@ def main_kb():
 
 def nap_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(bold("⚡ 1 Ngày - 15.000đ"), callback_data="nap_1_15000")],
-        [InlineKeyboardButton(bold("⚡ 3 Ngày - 35.000đ"), callback_data="nap_3_35000")],
-        [InlineKeyboardButton(bold("⚡ 1 Tháng - 70.000đ"), callback_data="nap_30_70000")],
-        [InlineKeyboardButton(bold("👑 Vĩnh Viễn - 100.000đ"), callback_data="nap_9999_100000")]
+        [InlineKeyboardButton(bold("⭐ Gói 1 Ngày - 15.000đ"), callback_data="nap_1_15000")],
+        [InlineKeyboardButton(bold("⭐ Gói 3 Ngày - 35.000đ"), callback_data="nap_3_35000")],
+        [InlineKeyboardButton(bold("💎 Gói 1 Tháng - 70.000đ"), callback_data="nap_30_70000")],
+        [InlineKeyboardButton(bold("👑 Gói Vĩnh Viễn - 100.000đ"), callback_data="nap_9999_100000")]
     ])
 
 def tool_kb():
@@ -177,23 +177,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = str(u.id)
     await fb_update(f"users/{uid}", {"name": u.first_name, "username": u.username, "join": str(datetime.now())})
     
-    # Kiểm tra key ngay khi start để làm thông báo nét
     has_key = await check_user_key(uid)
-    status_bot = "ĐÃ KÍCH HOẠT ✅" if has_key else "CHƯA KÍCH HOẠT ❌"
+    status_bot = "KÍCH HOẠT 🟢" if has_key else "CHƯA KÍCH HOẠT 🔴"
     
     msg = f"""╔══════════════════════╗
-    ✨ {bold('WELCOME TO MD5 AI')} ✨
+    ✨ {bold('MD5 CORE AI SYSTEM')} ✨
 ╚══════════════════════╝
 👋 {bold('Xin chào')}, {bold(u.first_name)}!
 ━━━━━━━━━━━━━━━━━━━━━━
-👤 {bold('TÀI KHOẢN')}: `{u.id}`
-🤖 {bold('TRẠNG THÁI')}: {bold(status_bot)}
-🛰 {bold('MÁY CHỦ')}: {bold('ONLINE 🟢')}
-📅 {bold('HÔM NAY')}: {datetime.now().strftime('%d/%m/%Y')}
+👤 {bold('Người dùng')}: `{u.first_name}`
+🆔 {bold('ID cá nhân')}: `{u.id}`
+🤖 {bold('Trạng thái')}: {bold(status_bot)}
+🛰 {bold('Máy chủ')}: {bold('Đang hoạt động 🟢')}
 ━━━━━━━━━━━━━━━━━━━━━━
-🚀 {bold('HỆ THỐNG DỰ ĐOÁN MD5 REALTIME')}
-Vui lòng sử dụng menu bên dưới để bắt đầu.
-━━━━━━━━━━━━━━━━━━━━━━"""
+🚀 {bold('Vui lòng chọn chức năng bên dưới để bắt đầu!')}"""
     await update.message.reply_text(msg, reply_markup=main_kb())
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -238,29 +235,25 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == BTN_NHAP_KEY:
         context.user_data['state'] = 'INPUT_KEY'
-        await update.message.reply_text(f"🔑 {bold('NHẬP MÃ KEY CỦA BẠN')}:")
+        await update.message.reply_text(f"🔑 {bold('VUI LÒNG NHẬP MÃ KEY CỦA BẠN')}:")
         
     elif text == BTN_NAP_TIEN:
-        # KIỂM TRA PHẢI DÙNG HẾT KEY MỚI ĐƯỢC MUA THÊM
-        if await check_user_key(uid):
-            await update.message.reply_text(f"⚠️ {bold('THÔNG BÁO')}:\n\nTài khoản của bạn {bold('đang còn Key')} hoạt động. Vui lòng sử dụng hết thời hạn Key hiện tại trước khi thực hiện mua thêm Key mới!")
-            return
-        await update.message.reply_text(f"💰 {bold('CHỌN GÓI DỊCH VỤ CẦN MUA')}:", reply_markup=nap_kb())
+        await update.message.reply_text(f"💳 {bold('BẢNG GIÁ & GÓI DỊCH VỤ')}\n━━━━━━━━━━━━━━━━━━━━━━\n🌟 {bold('Hãy chọn gói Key phù hợp với bạn')}:", reply_markup=nap_kb())
         
     elif text == BTN_DU_DOAN:
         if await check_user_key(uid):
-            await update.message.reply_text(f"🎯 {bold('CHỌN SẢNH GAME MUỐN DỰ ĐOÁN')}:", reply_markup=tool_kb())
+            await update.message.reply_text(f"🎯 {bold('CHỌN SẢNH GAME ĐỂ BẮT ĐẦU DỰ ĐOÁN')}:", reply_markup=tool_kb())
         else:
-            await update.message.reply_text(f"❌ {bold('TRUY CẬP BỊ TỪ CHỐI!')}\n\nBạn chưa kích hoạt Key hoặc Key đã hết hạn. Vui lòng {bold('Nạp Tiền')} hoặc {bold('Nhập Key')} để tiếp tục.")
+            await update.message.reply_text(f"❌ {bold('TRUY CẬP BỊ TỪ CHỐI!')}\n\nBạn chưa kích hoạt Key. Vui lòng {bold('Nạp Tiền')} hoặc {bold('Nhập Key')} để mở khóa.")
             
     elif text == BTN_LIEN_HE:
         kb = InlineKeyboardMarkup([[InlineKeyboardButton(bold("💬 Nhắn Admin"), url="https://t.me/anhyeuem1111")]])
-        support_msg = f"""📞 {bold('HỖ TRỢ KHÁCH HÀNG')}
+        support_msg = f"""📞 {bold('TRUNG TÂM HỖ TRỢ')}
 ━━━━━━━━━━━━━━━━━━━━
-👨‍💻 {bold('Kỹ Thuật')}: @anhyeuem1111
-🌟 {bold('Dịch vụ')}: Nạp key, lỗi tool, cộng tác.
+👨‍💻 {bold('Admin')}: @anhyeuem1111
+🌟 {bold('Hỗ trợ')}: Nạp key, Lỗi kỹ thuật, Hợp tác.
 ━━━━━━━━━━━━━━━━━━━━
-🚀 {bold('Nhấn vào nút bên dưới để gặp hỗ trợ!')}"""
+🚀 {bold('Nhấn vào nút dưới đây để kết nối ngay!')}"""
         await update.message.reply_text(support_msg, reply_markup=kb)
 
 async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -275,36 +268,36 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
              
         name_map = {"tool_lc79": "LC79", "tool_xocdia88": "XD88", "tool_luckywin": "LUCKYWIN"}
         api_map = {"tool_lc79": API_LC79, "tool_xocdia88": API_XOCDIA88, "tool_luckywin": API_LUCKYWIN}
-        msg = await query.message.reply_text(f"🔄 {bold(f'Đang kết nối API {name_map[query.data]}...')}")
+        msg = await query.message.reply_text(f"🔄 {bold(f'Đang thiết lập kết nối tới {name_map[query.data]}...')}")
         asyncio.create_task(loop_prediction(context, query.message.chat_id, msg.message_id, api_map[query.data], name_map[query.data]))
 
     elif query.data.startswith("nap_"):
         _, days, price = query.data.split("_")
         content = gen_content()
         await fb_set(f"pending/{uid}", {"days": int(days), "price": int(price), "content": content})
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton(bold("✅ Đã Chuyển"), callback_data="paid")]])
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton(bold("✅ Đã Chuyển Khoản"), callback_data="paid")]])
         
-        text = f"""💰 {bold('𝐓𝐇𝐀𝐍𝐇 𝐓𝐎𝐀́𝐍 𝐍𝐀̣𝐏 𝐓𝐈𝐄̂̀𝐍')} 💰
+        text = f"""💎 {bold('𝐓𝐇𝐀𝐍𝐇 𝐓𝐎𝐀́𝐍 𝐆𝐈𝐀𝐎 𝐃𝐈̣𝐂𝐇')} 💎
 ━━━━━━━━━━━━━━━━━━━━
 💵 {bold('𝐒𝐨̂́ 𝐭𝐢𝐞̂̀𝐧')}: {int(price):,} VNĐ
-🏦 {bold('𝐍𝐠𝐚̂𝐧 𝐡𝐚̀ng')}: VIETCOMBANK
+🏦 {bold('𝐍𝐠𝐚̂𝐧 𝐡𝐚̀ng')}: TPBANK
 👤 {bold('𝐂𝐡𝐮̉ 𝐓𝐊')}: DINH THI TUYET
-💳 {bold('𝐒𝐨̂́ 𝐓𝐊')}: `1063485588`
+💳 {bold('𝐒𝐨̂́ 𝐓𝐊')}: `00006326953`
 
-📝 {bold('𝐍𝐨̣̂i 𝐝𝐮𝐧𝐠')}: `{content}`
+📝 {bold('𝐍𝐨̣̂𝐢 𝐝𝐮𝐧𝐠')}: `{content}`
 ━━━━━━━━━━━━━━━━━━━━
-⚠️ {bold('𝐂𝐡uyển khoản đúng nội dung')}
-📞 {bold('Liên hệ')}: @anhyeuem1111"""
+⚠️ {bold('Lưu ý')}: Chuyển khoản chính xác nội dung để được duyệt nhanh nhất.
+📞 {bold('Hỗ trợ')}: @anhyeuem1111"""
 
         await query.message.reply_photo(
-            photo="https://i.postimg.cc/7b8GzHY2/IMG-2887.jpg", 
+            photo="https://i.postimg.cc/9Qwpq35R/1775383551412.png", 
             caption=text, 
             reply_markup=kb
         )
 
     elif query.data == "paid":
         context.user_data['state'] = 'WAIT_PHOTO'
-        await query.message.reply_text(f"⏳ {bold('𝐇𝐀̃𝐘 𝐆𝐔̛̉𝐈 𝐀̉𝐍𝐇 𝐁𝐈𝐋𝐋')} để Admin duyệt.")
+        await query.message.reply_text(f"⏳ {bold('𝐇𝐀̃𝐘 𝐆𝐔̛̉𝐈 𝐀̉𝐍𝐇 𝐁𝐈𝐋𝐋')} (Ảnh chụp giao dịch) để Admin xác nhận.")
 
     elif query.data.startswith("approve_"):
         if query.from_user.id != ADMIN_ID: return
@@ -328,11 +321,11 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await fb_delete(f"pending/{target_uid}")
             
             try:
-                msg_to_user = f"""🎊 {bold('𝐃𝐔𝐘𝐄̂𝐓 𝐓𝐇𝐀̀𝐍𝐇 𝐂𝐎̂𝐍𝐆!')}
+                msg_to_user = f"""🎊 {bold('𝐆𝐈𝐀𝐎 𝐃𝐈̣𝐂𝐇 𝐓𝐇𝐀̀𝐍𝐇 𝐂𝐎̂𝐍𝐆!')}
 ━━━━━━━━━━━━━━━━━━━━
-🔑 𝐊𝐄𝐘: `{new_key_code}`
-⏳ 𝐇𝐚̣ hạn dùng: {expiry_date.strftime('%d/%m/%Y %H:%M')}
-🚀 {bold('𝐇𝐚̃𝐲 𝐧𝐡𝐚̣̂𝐩 𝐤𝐞𝐲 đ𝐞̂̉ 𝐬𝐮̛̉ 𝐝𝐮̣𝐧𝐠!')}"""
+🔑 𝐌𝐚̃ 𝐊𝐞𝐲: `{new_key_code}`
+⏳ 𝐇𝐚̣𝐧 𝐝𝐮̀𝐧𝐠: {expiry_date.strftime('%d/%m/%Y %H:%M')}
+🚀 {bold('𝐇𝐚̃𝐲 𝐜𝐨𝐩𝐲 𝐤𝐞𝐲 𝐯𝐚̀ 𝐧𝐡𝐚̣̂𝐩 𝐯𝐚̀𝐨 𝐦𝐮̣𝐜 "𝐍𝐡𝐚̣̂𝐩 𝐊𝐞𝐲"!')}"""
                 await context.bot.send_message(int(target_uid), msg_to_user)
             except: pass
             
@@ -342,7 +335,7 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if query.from_user.id != ADMIN_ID: return
         target_uid = query.data.split("_")[1]
         await fb_delete(f"pending/{target_uid}")
-        try: await context.bot.send_message(int(target_uid), f"❌ {bold('GIAO DỊCH BỊ TỪ CHỐI!')}")
+        try: await context.bot.send_message(int(target_uid), f"❌ {bold('𝐆𝐈𝐀𝐎 𝐃𝐈̣𝐂𝐇 𝐂𝐔̉𝐀 𝐁𝐀̣𝐍 𝐁𝐈̣ 𝐓𝐔̛̀ 𝐂𝐇𝐎̂́𝐈!')}")
         except: pass
         await query.edit_message_caption(caption=f"❌ ĐÃ TỪ CHỐI ID: {target_uid}")
 
@@ -351,7 +344,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid = str(update.effective_user.id)
         info = await fb_get(f"pending/{uid}")
         if not info:
-            await update.message.reply_text("❌ Lỗi: Không tìm thấy yêu cầu nạp. Vui lòng bấm Nạp Tiền lại.")
+            await update.message.reply_text("❌ Lỗi hệ thống: Không tìm thấy yêu cầu nạp. Vui lòng thử lại.")
             return
             
         admin_kb = InlineKeyboardMarkup([
@@ -359,10 +352,10 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("❌ TỪ CHỐI", callback_data=f"reject_{uid}")]
         ])
         
-        caption = f"🔔 {bold('YÊU CẦU MỚI')}\n👤 User: {update.effective_user.first_name}\n🆔 ID: `{uid}`\n💵 Tiền: {info.get('price', 0):,}đ\n📝 Nội dung: `{info.get('content', 'N/A')}`"
+        caption = f"🔔 {bold('YÊU CẦU DUYỆT BILL')}\n👤 User: {update.effective_user.first_name}\n🆔 ID: `{uid}`\n💵 Tiền: {info.get('price', 0):,}đ\n📝 Nội dung: `{info.get('content', 'N/A')}`"
         
         await context.bot.send_photo(chat_id=ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption, reply_markup=admin_kb)
-        await update.message.reply_text(f"✅ {bold('ĐÃ GỬI BILL!')} Vui lòng chờ Admin.")
+        await update.message.reply_text(f"✅ {bold('ĐÃ GỬI XÁC MINH!')} Vui lòng đợi trong giây lát.")
         context.user_data['state'] = None
 
 def main():
@@ -372,7 +365,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     
-    print("🤖 Bot MD5 CORE AI is starting...")
+    print("🤖 Bot MD5 CORE AI is running...")
     app.run_polling()
 
 if __name__ == "__main__":
