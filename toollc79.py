@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
 # ==========================================
-BOT_TOKEN = "8782059164:AAEFUDE7syalSWkXeY5Md2Hl_sJMQOPzmT8"
+BOT_TOKEN = "8723751974:AAFBnzKUi0n-wgJBaCqpGi2VT5cme8teVZ4"
 ADMIN_ID = 7138785294 
 # API Sảnh Game
 API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
