@@ -1,68 +1,27 @@
-import json
-import random
-import string
-import re
-import asyncio
-import httpx 
-from datetime import datetime, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+import telebot
+import requests
+import threading
+import time
 
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
 # ==========================================
-BOT_TOKEN = "8723751974:AAFBnzKUi0n-wgJBaCqpGi2VT5cme8teVZ4"
-ADMIN_ID = 7138785294 
-# API Sảnh Game
-API_LC79 = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
-API_XOCDIA88 = "https://api-xocdia88-vip-pro.onrender.com/api/taixiumd5"
-API_LUCKYWIN = "https://api-luck8-tuananh.onrender.com/api/taixiumd5"
+BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
+ADMIN_ID = 7138785294
+API_URL = "https://api-lc79-congthuc-vip-tuananh.onrender.com/"
 
-# --- CẤU HÌNH FIREBASE (DÙNG REST API) ---
-FIREBASE_URL = "https://tuanchimto-37c66-default-rtdb.firebaseio.com"
+bot = telebot.TeleBot(BOT_TOKEN)
 
-# ========== FIREBASE ENGINE ==========
+tool_status = False
+chat_id = None
+last_session = None
 
-async def fb_get(path):
-    url = f"{FIREBASE_URL}/{path}.json"
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            res = await client.get(url)
-            if res.status_code == 200:
-                data = res.json()
-                return data if data is not None else {}
-            return {}
-    except: return {}
+history = []
+win = 0
+lose = 0
+last_prediction = None
 
-async def fb_set(path, data):
-    url = f"{FIREBASE_URL}/{path}.json"
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            await client.put(url, json=data)
-    except: pass
-
-async def fb_update(path, data):
-    url = f"{FIREBASE_URL}/{path}.json"
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            await client.patch(url, json=data)
-    except: pass
-
-async def fb_delete(path):
-    url = f"{FIREBASE_URL}/{path}.json"
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            await client.delete(url)
-    except: pass
-
-# ========== UTILS (TIỆN ÍCH) ==========
-
-def gen_key():
-    return f"BUFF-{''.join(random.choices(string.ascii_uppercase + string.digits, k=12))}"
-
-def gen_content():
-    return f"NAP{''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}"
-
+# Font chữ Bold giả cho giao diện sang trọng
 B_MAP = {
     'A': '𝐀', 'B': '𝐁', 'C': '𝐂', 'D': '𝐃', 'E': '𝐄', 'F': '𝐅', 'G': '𝐆', 'H': '𝐇',
     'I': '𝐈', 'J': '𝐉', 'K': '𝐊', 'L': '𝐋', 'M': '𝐌', 'N': '𝐍', 'O': '𝐎', 'P': '𝐏',
@@ -73,300 +32,141 @@ B_MAP = {
     'w': '𝐰', 'x': '𝐱', 'y': '𝐲', 'z': '𝐳', '0': '𝟎', '1': '𝟏', '2': '𝟐', '3': '𝟑',
     '4': '𝟒', '5': '𝟓', '6': '𝟔', '7': '𝟕', '8': '𝟖', '9': '𝟗'
 }
-def bold(text): return ''.join(B_MAP.get(c, c) for c in text)
+def bold(text): return ''.join(B_MAP.get(c, c) for c in str(text))
 
-# ========== KEYBOARDS (GIAO DIỆN NÚT) ==========
+# ================= CHECK ADMIN =================
+def is_admin(uid):
+    return uid == ADMIN_ID
 
-BTN_NHAP_KEY = bold('🔑 Nhập Key')
-BTN_NAP_TIEN = bold('💰 Nạp Tiền')
-BTN_DU_DOAN = bold('🎯 Dự Đoán')
-BTN_LIEN_HE = bold('📞 Hỗ Trợ')
-ALL_BUTTONS = [BTN_NHAP_KEY, BTN_NAP_TIEN, BTN_DU_DOAN, BTN_LIEN_HE]
-
-def main_kb():
-    return ReplyKeyboardMarkup([[BTN_NHAP_KEY, BTN_NAP_TIEN], [BTN_DU_DOAN, BTN_LIEN_HE]], resize_keyboard=True)
-
-def nap_kb():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(bold("⭐ Gói 1 Ngày - 15.000đ"), callback_data="nap_1_15000")],
-        [InlineKeyboardButton(bold("⭐ Gói 3 Ngày - 35.000đ"), callback_data="nap_3_35000")],
-        [InlineKeyboardButton(bold("💎 Gói 1 Tháng - 70.000đ"), callback_data="nap_30_70000")],
-        [InlineKeyboardButton(bold("👑 Gói Vĩnh Viễn - 100.000đ"), callback_data="nap_9999_100000")]
-    ])
-
-def tool_kb():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(bold("🎮 SẢNH LC79"), callback_data="tool_lc79")],
-        [InlineKeyboardButton(bold("🎮 SẢNH XD88"), callback_data="tool_xocdia88")],
-        [InlineKeyboardButton(bold("🎮 SẢNH LUCKYWIN"), callback_data="tool_luckywin")]
-    ])
-
-# ========== FUNCTIONS (XỬ LÝ CHÍNH) ==========
-
-async def check_user_key(uid):
-    user_keys = await fb_get(f"keys/{uid}")
-    if not user_keys or not isinstance(user_keys, list): return False
-    now = datetime.now()
-    valid_keys = [k for k in user_keys if datetime.fromisoformat(k['expiry']) > now]
-    if len(valid_keys) != len(user_keys):
-        await fb_set(f"keys/{uid}", valid_keys)
-    return len(valid_keys) > 0
-
-async def fetch_api_data(url):
-    try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            response = await client.get(url)
-            if response.status_code == 200:
-                return response.json()
-    except: pass
-    return None
-
-async def loop_prediction(context, chat_id, message_id, api_url, name):
-    error_count = 0
-    while True:
-        raw_data = await fetch_api_data(api_url)
-        if raw_data:
-            error_count = 0
-            data = raw_data.get('data', raw_data) if isinstance(raw_data, dict) else {}
-            
-            phien_vua_qua = data.get('Phiên') or data.get('Phien') or "N/A"
-            x1 = data.get('Xúc xắc 1') or data.get('Xuc_xac_1') or "?"
-            x2 = data.get('Xúc xắc 2') or data.get('Xuc_xac_2') or "?"
-            x3 = data.get('Xúc xắc 3') or data.get('Xuc_xac_3') or "?"
-            tong = data.get('Tổng') or data.get('Tong') or "0"
-            ket_qua = data.get('Kết') or data.get('Ket') or "N/A"
-            phien_hien_tai = data.get('Phiên hiện tại') or data.get('Phien_hien_tai') or "N/A"
-            du_doan = data.get('Dự đoán') or data.get('Du_doan') or "WAIT"
-            pattern = data.get('Pattern') or "N/A"
-            do_tin_cay = data.get('Độ tin cậy') or data.get('Do_tin_cay') or "0%"
-            
-            clean_percent = str(do_tin_cay).replace('%', '')
-            icon = "🔴" if "Tài" in str(du_doan) else "🔵" if "Xỉu" in str(du_doan) else "🟡"
-            
-            res_text = f"""┏━━━━━━━━━━━━━━━━━━┓
-   💎 {bold(f'MD5 CORE AI - {name}')} 💎
-┗━━━━━━━━━━━━━━━━━━┛
-🕒 {bold('Phiên vừa qua')}: `{phien_vua_qua}`
-🎲 {bold('Xúc xắc')}: `{x1} - {x2} - {x3}`
-📊 {bold('Tổng điểm')}: `{tong}` ➜ {bold(str(ket_qua).upper())}
-🧬 {bold('Chuỗi Pattern')}: `{pattern}`
-━━━━━━━━━━━━━━━━━━━━
-🆔 {bold('PHIÊN HIỆN TẠI')}: `{phien_hien_tai}`
-
-{icon} {bold('Hệ Thống Dự Đoán')}: ➜ ✨ {bold(str(du_doan).upper())} ✨
-📈 {bold('Độ Tin Cậy AI')}: `{clean_percent}%`
-━━━━━━━━━━━━━━━━━━━━
-🛰 {bold('Trạng thái')}: {bold('CONNECTED 🟢')}
-⏰ {bold('Cập nhật')}: {datetime.now().strftime('%H:%M:%S')}
-⚙️ {bold('Engine')}: {bold('Realtime MD5 v3.0')}"""
-
-            try:
-                await context.bot.edit_message_text(res_text, chat_id=chat_id, message_id=message_id, parse_mode='Markdown')
-            except: break
-        else:
-            error_count += 1
-            if error_count > 5:
-                try: await context.bot.edit_message_text(f"❌ {bold('MẤT KẾT NỐI API')} {name}. Đang thử lại...", chat_id=chat_id, message_id=message_id)
-                except: break
-        await asyncio.sleep(20)
-
-# ========== HANDLERS (XỬ LÝ LỆNH) ==========
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    uid = str(u.id)
-    await fb_update(f"users/{uid}", {"name": u.first_name, "username": u.username, "join": str(datetime.now())})
-    
-    has_key = await check_user_key(uid)
-    status_bot = "KÍCH HOẠT 🟢" if has_key else "CHƯA KÍCH HOẠT 🔴"
-    
-    msg = f"""╔══════════════════════╗
-    ✨ {bold('MD5 CORE AI SYSTEM')} ✨
+# ================= START =================
+@bot.message_handler(commands=['start'])
+def start(message):
+    msg = f"""
+╔══════════════════════╗
+       ✨ {bold('MD5 CORE AI SYSTEM')} ✨
 ╚══════════════════════╝
-👋 {bold('Xin chào')}, {bold(u.first_name)}!
+👋 {bold('Xin chào')}, {message.from_user.first_name}!
+
+🚀 {bold('HỆ THỐNG DỰ ĐOÁN TÀI XỈU VIP')}
 ━━━━━━━━━━━━━━━━━━━━━━
-👤 {bold('Người dùng')}: `{u.first_name}`
-🆔 {bold('ID cá nhân')}: `{u.id}`
-🤖 {bold('Trạng thái')}: {bold(status_bot)}
-🛰 {bold('Máy chủ')}: {bold('Đang hoạt động 🟢')}
+▶️ /battool : Kích hoạt hệ thống
+▶️ /tattool : Dừng hệ thống
 ━━━━━━━━━━━━━━━━━━━━━━
-🚀 {bold('Vui lòng chọn chức năng bên dưới để bắt đầu!')}"""
-    await update.message.reply_text(msg, reply_markup=main_kb())
+⚠️ {bold('Lưu ý')}: Đánh đều tay, quản lý vốn!
+"""
+    bot.send_message(message.chat.id, msg)
 
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    uid = str(update.effective_user.id)
-    state = context.user_data.get('state')
-
-    if text in ALL_BUTTONS: context.user_data['state'] = None
-
-    if state == 'INPUT_KEY':
-        key_input = text.strip()
-        if not re.match(r"^BUFF-[A-Z0-9]{12}$", key_input):
-            await update.message.reply_text(f"❌ {bold('SAI ĐỊNH DẠNG')} (BUFF-XXXXXXXXXXXX)")
-            return
-        
-        all_keys_db = await fb_get("keys")
-        found_key, owner_id = None, None
-        
-        if all_keys_db:
-            for oid, k_list in all_keys_db.items():
-                if not isinstance(k_list, list): continue
-                for k in k_list:
-                    if k['key'] == key_input and datetime.fromisoformat(k['expiry']) > datetime.now():
-                        found_key, owner_id = k, oid
-                        break
-                if found_key: break
-            
-        if found_key:
-            if owner_id != uid:
-                user_keys = await fb_get(f"keys/{uid}")
-                if not isinstance(user_keys, list): user_keys = []
-                user_keys.append(found_key)
-                await fb_set(f"keys/{uid}", user_keys)
-                old_owner_keys = [k for k in all_keys_db[owner_id] if k['key'] != key_input]
-                await fb_set(f"keys/{owner_id}", old_owner_keys)
-            
-            context.user_data['state'] = None
-            await update.message.reply_text(f"✅ {bold('KÍCH HOẠT THÀNH CÔNG!')}\nBây giờ bạn có thể sử dụng chức năng {bold('Dự Đoán')}.", reply_markup=main_kb())
-        else:
-            await update.message.reply_text(f"❌ {bold('KEY KHÔNG HỢP LỆ HOẶC HẾT HẠN')}")
+# ================= BẬT TOOL =================
+@bot.message_handler(commands=['battool'])
+def battool(message):
+    global tool_status, chat_id
+    if not is_admin(message.from_user.id):
+        bot.send_message(message.chat.id, f"❌ {bold('TRUY CẬP BỊ TỪ CHỐI')}")
         return
 
-    if text == BTN_NHAP_KEY:
-        context.user_data['state'] = 'INPUT_KEY'
-        await update.message.reply_text(f"🔑 {bold('VUI LÒNG NHẬP MÃ KEY CỦA BẠN')}:")
-        
-    elif text == BTN_NAP_TIEN:
-        await update.message.reply_text(f"💳 {bold('BẢNG GIÁ & GÓI DỊCH VỤ')}\n━━━━━━━━━━━━━━━━━━━━━━\n🌟 {bold('Hãy chọn gói Key phù hợp với bạn')}:", reply_markup=nap_kb())
-        
-    elif text == BTN_DU_DOAN:
-        if await check_user_key(uid):
-            await update.message.reply_text(f"🎯 {bold('CHỌN SẢNH GAME ĐỂ BẮT ĐẦU DỰ ĐOÁN')}:", reply_markup=tool_kb())
-        else:
-            await update.message.reply_text(f"❌ {bold('TRUY CẬP BỊ TỪ CHỐI!')}\n\nBạn chưa kích hoạt Key. Vui lòng {bold('Nạp Tiền')} hoặc {bold('Nhập Key')} để mở khóa.")
-            
-    elif text == BTN_LIEN_HE:
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton(bold("💬 Nhắn Admin"), url="https://t.me/anhyeuem1111")]])
-        support_msg = f"""📞 {bold('TRUNG TÂM HỖ TRỢ')}
-━━━━━━━━━━━━━━━━━━━━
-👨‍💻 {bold('Admin')}: @anhyeuem1111
-🌟 {bold('Hỗ trợ')}: Nạp key, Lỗi kỹ thuật, Hợp tác.
-━━━━━━━━━━━━━━━━━━━━
-🚀 {bold('Nhấn vào nút dưới đây để kết nối ngay!')}"""
-        await update.message.reply_text(support_msg, reply_markup=kb)
+    tool_status = True
+    chat_id = message.chat.id
+    bot.send_message(chat_id, f"✅ {bold('HỆ THỐNG ĐÃ KÍCH HOẠT')} 🟢\nĐang chờ tín hiệu từ Server...")
 
-async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    uid = str(query.from_user.id)
+# ================= TẮT TOOL =================
+@bot.message_handler(commands=['tattool'])
+def tattool(message):
+    global tool_status
+    if not is_admin(message.from_user.id):
+        bot.send_message(message.chat.id, f"❌ {bold('TRUY CẬP BỊ TỪ CHỐI')}")
+        return
 
-    if query.data in ["tool_lc79", "tool_xocdia88", "tool_luckywin"]:
-        if not await check_user_key(uid):
-             await query.message.reply_text(f"❌ {bold('KEY CỦA BẠN ĐÃ HẾT HẠN!')}")
-             return
-             
-        name_map = {"tool_lc79": "LC79", "tool_xocdia88": "XD88", "tool_luckywin": "LUCKYWIN"}
-        api_map = {"tool_lc79": API_LC79, "tool_xocdia88": API_XOCDIA88, "tool_luckywin": API_LUCKYWIN}
-        msg = await query.message.reply_text(f"🔄 {bold(f'Đang thiết lập kết nối tới {name_map[query.data]}...')}")
-        asyncio.create_task(loop_prediction(context, query.message.chat_id, msg.message_id, api_map[query.data], name_map[query.data]))
+    tool_status = False
+    bot.send_message(message.chat.id, f"⛔ {bold('HỆ THỐNG ĐÃ TẮT')} 🔴")
 
-    elif query.data.startswith("nap_"):
-        _, days, price = query.data.split("_")
-        content = gen_content()
-        await fb_set(f"pending/{uid}", {"days": int(days), "price": int(price), "content": content})
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton(bold("✅ Đã Chuyển Khoản"), callback_data="paid")]])
-        
-        text = f"""💎 {bold('𝐓𝐇𝐀𝐍𝐇 𝐓𝐎𝐀́𝐍 𝐆𝐈𝐀𝐎 𝐃𝐈̣𝐂𝐇')} 💎
-━━━━━━━━━━━━━━━━━━━━
-💵 {bold('𝐒𝐨̂́ 𝐭𝐢𝐞̂̀𝐧')}: {int(price):,} VNĐ
-🏦 {bold('𝐍𝐠𝐚̂𝐧 𝐡𝐚̀ng')}: TPBANK
-👤 {bold('𝐂𝐡𝐮̉ 𝐓𝐊')}: DINH THI TUYET
-💳 {bold('𝐒𝐨̂́ 𝐓𝐊')}: `00006326953`
+# ================= TOOL LOOP =================
+def tool_loop():
+    global last_session, win, lose, history, last_prediction
 
-📝 {bold('𝐍𝐨̣̂𝐢 𝐝𝐮𝐧𝐠')}: `{content}`
-━━━━━━━━━━━━━━━━━━━━
-⚠️ {bold('Lưu ý')}: Chuyển khoản chính xác nội dung để được duyệt nhanh nhất.
-📞 {bold('Hỗ trợ')}: @anhyeuem1111"""
-
-        await query.message.reply_photo(
-            photo="https://i.postimg.cc/9Qwpq35R/1775383551412.png", 
-            caption=text, 
-            reply_markup=kb
-        )
-
-    elif query.data == "paid":
-        context.user_data['state'] = 'WAIT_PHOTO'
-        await query.message.reply_text(f"⏳ {bold('𝐇𝐀̃𝐘 𝐆𝐔̛̉𝐈 𝐀̉𝐍𝐇 𝐁𝐈𝐋𝐋')} (Ảnh chụp giao dịch) để Admin xác nhận.")
-
-    elif query.data.startswith("approve_"):
-        if query.from_user.id != ADMIN_ID: return
-        target_uid = query.data.split("_")[1]
-        p_info = await fb_get(f"pending/{target_uid}")
-        if p_info:
-            new_key_code = gen_key()
-            days_to_add = int(p_info['days'])
-            expiry_date = datetime.now() + timedelta(days=days_to_add if days_to_add < 9000 else 3650)
-            
-            current_keys = await fb_get(f"keys/{target_uid}")
-            if not isinstance(current_keys, list): current_keys = []
-            
-            current_keys.append({
-                "key": new_key_code, 
-                "expiry": expiry_date.isoformat(),
-                "created_at": datetime.now().isoformat()
-            })
-            
-            await fb_set(f"keys/{target_uid}", current_keys)
-            await fb_delete(f"pending/{target_uid}")
-            
+    while True:
+        if tool_status and chat_id:
             try:
-                msg_to_user = f"""🎊 {bold('𝐆𝐈𝐀𝐎 𝐃𝐈̣𝐂𝐇 𝐓𝐇𝐀̀𝐍𝐇 𝐂𝐎̂𝐍𝐆!')}
+                r = requests.get(API_URL, timeout=10)
+                js = r.json()
+                data = js["data"]
+
+                phien = data["Phiên"]
+                phien_ht = data["Phiên hiện tại"]
+                x1 = data["Xúc xắc 1"]
+                x2 = data["Xúc xắc 2"]
+                x3 = data["Xúc xắc 3"]
+                tong = data["Tổng"]
+                ket_qua = data["Kết"]
+                du_doan = data["Dự đoán"]
+                do_tin_cay = data["Độ tin cậy"]
+                pattern = data["Pattern"]
+
+                if phien != last_session:
+                    # Gửi tin nhắn thông báo AI đang quét dữ liệu
+                    scan_msg = bot.send_message(chat_id, f"""
+🔍 {bold('AI CORE')} đang quét dữ liệu phiên `{phien_ht}`...
 ━━━━━━━━━━━━━━━━━━━━
-🔑 𝐌𝐚̃ 𝐊𝐞𝐲: `{new_key_code}`
-⏳ 𝐇𝐚̣𝐧 𝐝𝐮̀𝐧𝐠: {expiry_date.strftime('%d/%m/%Y %H:%M')}
-🚀 {bold('𝐇𝐚̃𝐲 𝐜𝐨𝐩𝐲 𝐤𝐞𝐲 𝐯𝐚̀ 𝐧𝐡𝐚̣̂𝐩 𝐯𝐚̀𝐨 𝐦𝐮̣𝐜 "𝐍𝐡𝐚̣̂𝐩 𝐊𝐞𝐲"!')}"""
-                await context.bot.send_message(int(target_uid), msg_to_user)
-            except: pass
-            
-            await query.edit_message_caption(caption=f"✅ ĐÃ DUYỆT CHO ID: {target_uid}\n🔑 Key: `{new_key_code}`\n📅 Hạn: {expiry_date.strftime('%d/%m/%Y')}")
+⚙️ {bold('Algorithm')}: `LC79-Bitwise v3.0`
+📡 {bold('Status')}: `Fetching data...`
+📊 {bold('Analyzing')}: `1,024 patterns`
+⌛ {bold('Loading')}: [▰▰▰▰▰▰▰▱▱▱] 75%
+""")
+                    # Đợi 2 giây để tạo hiệu ứng AI đang làm việc thật
+                    time.sleep(2)
+                    bot.delete_message(chat_id, scan_msg.message_id)
 
-    elif query.data.startswith("reject_"):
-        if query.from_user.id != ADMIN_ID: return
-        target_uid = query.data.split("_")[1]
-        await fb_delete(f"pending/{target_uid}")
-        try: await context.bot.send_message(int(target_uid), f"❌ {bold('𝐆𝐈𝐀𝐎 𝐃𝐈̣𝐂𝐇 𝐂𝐔̉𝐀 𝐁𝐀̣𝐍 𝐁𝐈̣ 𝐓𝐔̛̀ 𝐂𝐇𝐎̂́𝐈!')}")
-        except: pass
-        await query.edit_message_caption(caption=f"❌ ĐÃ TỪ CHỐI ID: {target_uid}")
+                    # ===== XỬ LÝ THẮNG THUA PHIÊN TRƯỚC =====
+                    if last_prediction:
+                        if last_prediction == ket_qua:
+                            win += 1
+                            history.append("✅")
+                        else:
+                            lose += 1
+                            history.append("❌")
+                        history = history[-10:]
 
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get('state') == 'WAIT_PHOTO':
-        uid = str(update.effective_user.id)
-        info = await fb_get(f"pending/{uid}")
-        if not info:
-            await update.message.reply_text("❌ Lỗi hệ thống: Không tìm thấy yêu cầu nạp. Vui lòng thử lại.")
-            return
-            
-        admin_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("✅ DUYỆT", callback_data=f"approve_{uid}"), 
-             InlineKeyboardButton("❌ TỪ CHỐI", callback_data=f"reject_{uid}")]
-        ])
-        
-        caption = f"🔔 {bold('YÊU CẦU DUYỆT BILL')}\n👤 User: {update.effective_user.first_name}\n🆔 ID: `{uid}`\n💵 Tiền: {info.get('price', 0):,}đ\n📝 Nội dung: `{info.get('content', 'N/A')}`"
-        
-        await context.bot.send_photo(chat_id=ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption, reply_markup=admin_kb)
-        await update.message.reply_text(f"✅ {bold('ĐÃ GỬI XÁC MINH!')} Vui lòng đợi trong giây lát.")
-        context.user_data['state'] = None
+                    last_prediction = du_doan
+                    last_session = phien
 
-def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(callback))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    
-    print("🤖 Bot MD5 CORE AI is running...")
-    app.run_polling()
+                    total = win + lose
+                    rate = round((win / total) * 100, 1) if total > 0 else 0
+                    history_text = " ".join(history) if history else "Chưa có dữ liệu"
 
-if __name__ == "__main__":
-    main()
+                    # ===== GIAO DIỆN DỰ ĐOÁN CHÍNH =====
+                    icon = "🔴" if "Tài" in str(du_doan) else "🔵" if "Xỉu" in str(du_doan) else "🟡"
+                    
+                    final_msg = f"""
+┏━━━━━━━━━━━━━━━━━━┓
+   💎 {bold('TOOL LC79 VIP PRO AI 3.0')} 💎
+┗━━━━━━━━━━━━━━━━━━┛
+🕒 {bold('Phiên vừa qua')}: `{phien}`
+🎲 {bold('Xúc xắc')}: `{x1} - {x2} - {x3}`
+📊 {bold('Tổng điểm')}: `{tong}` ➜ {bold(str(ket_qua).upper())}
+━━━━━━━━━━━━━━━━━━━━
+🆔 {bold('PHIÊN HIỆN TẠI')}: `{phien_ht}`
+
+{icon} {bold('Hệ Thống Dự Đoán')}:
+➡ ✨ {bold(str(du_doan).upper())} ✨
+
+📈 {bold('Độ Tin Cậy AI')}: `{do_tin_cay}%`
+🧬 {bold('Chuỗi Pattern')}: `{pattern}`
+━━━━━━━━━━━━━━━━━━━━
+📊 {bold('PHÂN TÍCH HIỆU SUẤT')}
+🏆 {bold('Thắng')}: `{win}`  |  💀 {bold('Thua')}: `{lose}`
+📈 {bold('Tỷ lệ thắng')}: `{rate}%`
+📜 {bold('Lịch sử')}: {history_text}
+━━━━━━━━━━━━━━━━━━━━
+🛰 {bold('Status')}: {bold('ONLINE 🟢')} | {bold('v3.0.1')}
+"""
+                    bot.send_message(chat_id, final_msg)
+
+            except Exception as e:
+                print("API lỗi:", e)
+
+        time.sleep(10)
+
+# ================= RUN =================
+threading.Thread(target=tool_loop, daemon=True).start()
+
+print("Bot MD5 CORE AI đang chạy...")
+bot.infinity_polling()
