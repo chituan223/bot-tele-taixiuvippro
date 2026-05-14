@@ -7,8 +7,7 @@ import time
 # CẤU HÌNH HỆ THỐNG
 # ==========================================
 BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
-ADMIN_ID = 7138785294
-      ADMIN_ID = 6358157439
+ADMIN_ID = 6358157439
 API_URL = "https://api-lc79-congthuc-vip-tuananh.onrender.com/"
 
 bot = telebot.TeleBot(BOT_TOKEN)
