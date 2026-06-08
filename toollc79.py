@@ -8,7 +8,7 @@ import time
 # ==========================================
 BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
 ADMIN_ID = 6358157439
-API_URL = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
+API_URL = "https://api-lc79-congthuc-vip-tuananh.onrender.com"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -43,7 +43,7 @@ def is_admin(uid):
 def start(message):
     msg = f"""
 ╔══════════════════════╗
-       ✨ {bold('MD5 CORE AI SYSTEM')} ✨
+        ✨ {bold('MD5 CORE AI SYSTEM')} ✨
 ╚══════════════════════╝
 👋 {bold('Xin chào')}, {message.from_user.first_name}!
 
@@ -90,6 +90,7 @@ def tool_loop():
                 js = r.json()
                 data = js["data"]
 
+                # Đã sửa lại chính xác theo Key của chuỗi JSON mẫu trả về
                 phien = data["Phiên"]
                 phien_ht = data["Phiên hiện tại"]
                 x1 = data["Xúc xắc 1"]
@@ -113,7 +114,10 @@ def tool_loop():
 """)
                     # Đợi 2 giây để tạo hiệu ứng AI đang làm việc thật
                     time.sleep(2)
-                    bot.delete_message(chat_id, scan_msg.message_id)
+                    try:
+                        bot.delete_message(chat_id, scan_msg.message_id)
+                    except Exception:
+                        pass
 
                     # ===== XỬ LÝ THẮNG THUA PHIÊN TRƯỚC =====
                     if last_prediction:
