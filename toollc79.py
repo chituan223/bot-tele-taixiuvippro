@@ -8,7 +8,7 @@ import time
 # ==========================================
 BOT_TOKEN = "8511427168:AAE1doWBxBZo_-q83e8qVY3WI631o9XikSY"
 ADMIN_ID = 6358157439
-API_URL = "https://api-lc79-congthuc-vip-tuananh.onrender.com"
+API_URL = "https://api-lc79-congthuc-vip-tuananh.onrender.com/api/taixiumd5"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
